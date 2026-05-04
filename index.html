@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HUE – Coin Toss Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── RESET & BASE ── */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#1a2f5e;
+  --navy2:#243f7a;
+  --gold:#c8960c;
+  --gold-light:#f0b429;
+  --gold-pale:#fdf3d7;
+  --bg:#f0f4fb;
+  --white:#fff;
+  --text:#12192e;
+  --muted:#5a6480;
+  --border:#dde3f0;
+  --heads:#f0b429;
+  --tails:#3b6cb7;
+  --radius:14px;
+  --shadow:0 4px 24px rgba(26,47,94,.10);
+}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+ 
+/* ── HEADER ── */
+header{
+  background:var(--navy);
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 18px rgba(26,47,94,.35);
+}
+.nav-inner{
+  max-width:1100px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 32px;
+}
+/* HUE Logo drawn in SVG */
+.hue-logo{height:48px;width:auto}
+.nav-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px;letter-spacing:2px;
+  color:rgba(255,255,255,.55);
+}
+ 
+/* ── HERO BAND ── */
+.hero{
+  background:linear-gradient(120deg,var(--navy) 0%,var(--navy2) 100%);
+  padding:52px 32px 56px;
+  text-align:center;color:#fff;
+  position:relative;overflow:hidden;
+}
+.hero::after{
+  content:'';position:absolute;
+  bottom:-70px;right:-70px;
+  width:340px;height:340px;border-radius:50%;
+  background:rgba(200,150,12,.07);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-block;
+  background:rgba(240,180,41,.15);
+  border:1px solid rgba(240,180,41,.35);
+  color:var(--gold-light);
+  font-size:12px;font-weight:700;letter-spacing:1px;
+  padding:5px 18px;border-radius:30px;margin-bottom:18px;
+  text-transform:uppercase;
+}
+.hero h1{font-size:38px;font-weight:900;line-height:1.15;margin-bottom:10px}
+.hero h1 span{color:var(--gold-light)}
+.hero p{font-size:15px;color:rgba(255,255,255,.65);max-width:520px;margin:0 auto;line-height:1.8}
+ 
+/* ── LAYOUT ── */
+.page{max-width:1100px;margin:0 auto;padding:40px 24px 60px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+ 
+/* ── CARD ── */
+.card{
+  background:var(--white);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:28px 24px;
+  box-shadow:var(--shadow);
+}
+.card-title{
+  font-size:13px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:20px;display:flex;align-items:center;gap:8px;
+}
+.card-title::before{
+  content:'';display:inline-block;
+  width:3px;height:14px;border-radius:2px;
+  background:var(--gold);flex-shrink:0;
+}
+ 
+/* ── COIN ── */
+.coin-arena{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:28px;
+  grid-column:1/-1;
+}
+.coin-wrap{perspective:800px}
+.coin{
+  width:160px;height:160px;
+  border-radius:50%;
+  position:relative;
+  transform-style:preserve-3d;
+  transition:transform 0s;
+  cursor:default;
+}
+.coin.spinning{
+  animation:coinSpin 0.8s ease-out forwards;
+}
+@keyframes coinSpin{
+  0%  {transform:rotateY(0deg) scale(1)}
+  30% {transform:rotateY(540deg) scale(1.12)}
+  70% {transform:rotateY(1080deg) scale(1.05)}
+  100%{transform:rotateY(1440deg) scale(1)}
+}
+.coin-face{
+  position:absolute;inset:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  backface-visibility:hidden;
+  font-size:64px;
+  border:5px solid rgba(255,255,255,.4);
+  box-shadow:0 8px 32px rgba(0,0,0,.18);
+}
+.coin-heads{background:linear-gradient(135deg,#f5c842,#c8960c)}
+.coin-tails{background:linear-gradient(135deg,#3b6cb7,#1a2f5e);transform:rotateY(180deg)}
+.coin-result-label{
+  font-size:22px;font-weight:900;letter-spacing:2px;
+  text-transform:uppercase;margin-top:4px;
+  transition:color .3s;
+}
+ 
+/* ── CONTROLS ── */
+.controls{display:flex;flex-direction:column;gap:14px;width:100%;max-width:420px}
+.input-group{display:flex;flex-direction:column;gap:6px}
+.input-group label{font-size:13px;font-weight:700;color:var(--navy)}
+.input-group input[type=number],
+.input-group select{
+  border:1.5px solid var(--border);
+  border-radius:9px;padding:10px 14px;
+  font-family:'Cairo',sans-serif;font-size:15px;
+  color:var(--text);background:var(--bg);
+  outline:none;transition:border-color .2s;
+}
+.input-group input:focus,
+.input-group select:focus{border-color:var(--navy)}
+ 
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+ 
+.btn-toss{
+  width:100%;padding:14px;
+  background:var(--navy);color:#fff;
+  border:none;border-radius:10px;
+  font-family:'Cairo',sans-serif;font-size:17px;font-weight:800;
+  cursor:pointer;letter-spacing:.5px;
+  transition:background .2s,transform .15s,box-shadow .2s;
+  box-shadow:0 4px 16px rgba(26,47,94,.25);
+}
+.btn-toss:hover{background:var(--navy2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(26,47,94,.3)}
+.btn-toss:active{transform:translateY(0)}
+.btn-toss:disabled{opacity:.5;cursor:not-allowed;transform:none}
+ 
+.btn-reset{
+  width:100%;padding:11px;
+  background:transparent;color:var(--muted);
+  border:1.5px solid var(--border);border-radius:10px;
+  font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.btn-reset:hover{border-color:var(--navy);color:var(--navy)}
+ 
+/* ── STAT CARDS ── */
+.stat-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:12px;padding:20px 18px;
+  text-align:center;position:relative;overflow:hidden;
+}
+.stat-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;
+  height:3px;
+}
+.stat-card.heads::after{background:var(--heads)}
+.stat-card.tails::after{background:var(--tails)}
+.stat-card.total::after{background:var(--navy)}
+ 
+.stat-num{font-size:32px;font-weight:900;color:var(--navy)}
+.stat-num.gold{color:var(--gold)}
+.stat-pct{font-size:13px;font-weight:600;color:var(--muted);margin-top:2px}
+.stat-label{font-size:12px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.6px}
+ 
+/* ── HISTORY ── */
+.history-wrap{max-height:160px;overflow-y:auto;margin-top:4px}
+.history-wrap::-webkit-scrollbar{width:4px}
+.history-wrap::-webkit-scrollbar-track{background:var(--bg);border-radius:4px}
+.history-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.history-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;
+  flex-shrink:0;
+}
+.chip.H{background:var(--gold-pale);color:#8a6200}
+.chip.T{background:#e8eef8;color:#1a2f5e}
+ 
+/* ── PROBABILITY INSIGHT ── */
+.insight-box{
+  background:linear-gradient(120deg,var(--navy),var(--navy2));
+  border-radius:var(--radius);padding:24px;color:#fff;
+  grid-column:1/-1;
+}
+.insight-box h3{font-size:15px;font-weight:700;margin-bottom:14px;color:var(--gold-light)}
+.insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.insight-item .inum{font-size:26px;font-weight:900;color:var(--gold-light)}
+.insight-item .ilabel{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px}
+ 
+/* ── CHART ── */
+.chart-container{position:relative;height:240px}
+ 
+/* ── PROB BAR ── */
+.prob-bar-wrap{margin-top:8px}
+.prob-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.prob-bar-label{font-size:13px;font-weight:700;width:52px;flex-shrink:0}
+.prob-bar-track{flex:1;background:var(--bg);border-radius:6px;height:12px;overflow:hidden}
+.prob-bar-fill{height:100%;border-radius:6px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.prob-bar-pct{font-size:13px;font-weight:700;width:42px;text-align:right;flex-shrink:0}
+ 
+/* ── EXPECTED CONVERGENCE MSG ── */
+.converge{
+  background:var(--gold-pale);border:1px solid rgba(200,150,12,.25);
+  border-radius:10px;padding:14px 16px;
+  font-size:13px;color:#7a5800;line-height:1.7;margin-top:8px;
+}
+ 
+/* ── FOOTER ── */
+footer{
+  background:var(--navy);color:rgba(255,255,255,.55);
+  text-align:center;padding:28px 20px;font-size:13px;
+}
+footer strong{color:var(--gold-light)}
+ 
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  .grid-2{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:1fr 1fr}
+  .hero h1{font-size:26px}
+  .nav-inner{padding:12px 16px}
+  .page{padding:24px 14px 40px}
+}
+</style>
+</head>
+<body>
+ 
+<!-- ══════ HEADER ══════ -->
+<header>
+  <div class="nav-inner">
+    <!-- HUE Logo SVG (inline, no external image needed) -->
+    <svg class="hue-logo" viewBox="0 0 220 56" xmlns="http://www.w3.org/2000/svg">
+      <!-- Gold box with Eye of Horus -->
+      <rect x="0" y="2" width="52" height="52" rx="5" fill="#c8960c"/>
+      <!-- Eye outline -->
+      <ellipse cx="26" cy="24" rx="13" ry="8" fill="none" stroke="#1a2f5e" stroke-width="2.2"/>
+      <!-- Pupil -->
+      <circle cx="26" cy="24" r="4.5" fill="#1a2f5e"/>
+      <circle cx="24.5" cy="22.5" r="1.5" fill="#c8960c"/>
+      <!-- Horus curl lines -->
+      <path d="M13 24 Q8 30 11 37" stroke="#1a2f5e" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M26 32 Q21 41 16 44" stroke="#1a2f5e" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M26 32 Q31 39 27 46" stroke="#1a2f5e" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <!-- Navy box with HUE -->
+      <rect x="56" y="2" width="160" height="52" rx="5" fill="#1a2f5e"/>
+      <text x="136" y="38" font-family="Georgia,serif" font-size="34" font-weight="bold" fill="white" text-anchor="middle">HUE</text>
+      <!-- Subtitle beneath -->
+      <text x="110" y="57" font-family="Arial,sans-serif" font-size="8.5" fill="rgba(255,255,255,0.5)" text-anchor="middle" letter-spacing="1">HORUS UNIVERSITY — EGYPT</text>
+    </svg>
+    <span class="nav-title">AI &amp; PROBABILITY PROJECT</span>
+  </div>
+</header>
+ 
+<!-- ══════ HERO ══════ -->
+<div class="hero">
+  <div class="hero-badge">Project #2 — Probability Simulation</div>
+  <h1>Coin Toss <span>Simulation</span></h1>
+  <p>Explore the Law of Large Numbers interactively. Toss a coin once or thousands of times and watch probability converge in real time.</p>
+</div>
+ 
+<!-- ══════ MAIN ══════ -->
+<div class="page">
+ 
+  <!-- ROW 1: Coin + Controls -->
+  <div class="grid-2" style="margin-bottom:24px">
+ 
+    <!-- Coin visual -->
+    <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;min-height:320px">
+      <div class="card-title" style="align-self:flex-start">Live Toss</div>
+      <div class="coin-wrap">
+        <div class="coin" id="coin">
+          <div class="coin-face coin-heads">🪙</div>
+          <div class="coin-face coin-tails">🔵</div>
+        </div>
+      </div>
+      <div class="coin-result-label" id="resultLabel" style="color:var(--muted)">— Press Toss —</div>
+    </div>
+ 
+    <!-- Controls -->
+    <div class="card" style="display:flex;flex-direction:column;gap:16px">
+      <div class="card-title">Settings &amp; Controls</div>
+ 
+      <div class="controls">
+        <div class="input-row">
+          <div class="input-group">
+            <label for="numTosses">Number of Tosses</label>
+            <input type="number" id="numTosses" value="1" min="1" max="10000">
+          </div>
+          <div class="input-group">
+            <label for="biasSelect">Coin Bias</label>
+            <select id="biasSelect">
+              <option value="0.5">Fair (50/50)</option>
+              <option value="0.6">Slightly Heads (60%)</option>
+              <option value="0.7">Biased Heads (70%)</option>
+              <option value="0.4">Slightly Tails (60%)</option>
+              <option value="0.3">Biased Tails (70%)</option>
+            </select>
+          </div>
+        </div>
+ 
+        <div class="input-group">
+          <label>Speed</label>
+          <select id="speedSelect">
+            <option value="0">Instant</option>
+            <option value="80" selected>Normal</option>
+            <option value="300">Slow (watch each flip)</option>
+          </select>
+        </div>
+ 
+        <button class="btn-toss" id="btnToss" onclick="startToss()">🪙 Toss Coin</button>
+        <button class="btn-reset" onclick="resetAll()">↺ Reset Everything</button>
+      </div>
+ 
+      <!-- Probability bars -->
+      <div style="margin-top:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Live Probability</div>
+        <div class="prob-bar-row">
+          <span class="prob-bar-label" style="color:#8a6200">Heads</span>
+          <div class="prob-bar-track"><div class="prob-bar-fill" id="barHeads" style="width:50%;background:var(--heads)"></div></div>
+          <span class="prob-bar-pct" id="pctHeads" style="color:#8a6200">50%</span>
+        </div>
+        <div class="prob-bar-row">
+          <span class="prob-bar-label" style="color:var(--tails)">Tails</span>
+          <div class="prob-bar-track"><div class="prob-bar-fill" id="barTails" style="width:50%;background:var(--tails)"></div></div>
+          <span class="prob-bar-pct" id="pctTails" style="color:var(--tails)">50%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ROW 2: Stats -->
+  <div class="grid-3" style="margin-bottom:24px">
+    <div class="stat-card heads">
+      <div class="stat-num gold" id="statHeads">0</div>
+      <div class="stat-pct" id="statHeadsPct">0.00%</div>
+      <div class="stat-label">Heads</div>
+    </div>
+    <div class="stat-card tails">
+      <div class="stat-num" id="statTails">0</div>
+      <div class="stat-pct" id="statTailsPct">0.00%</div>
+      <div class="stat-label">Tails</div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-pct" id="statStreak">Streak: 0</div>
+      <div class="stat-label">Total Tosses</div>
+    </div>
+  </div>
+ 
+  <!-- ROW 3: Charts side by side -->
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Results Distribution</div>
+      <div class="chart-container">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Convergence to 50% (Law of Large Numbers)</div>
+      <div class="chart-container">
+        <canvas id="lineChart"></canvas>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ROW 4: Insight + History -->
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Toss History</div>
+      <div class="history-wrap" id="historyWrap">
+        <div class="history-chips" id="historyChips">
+          <span style="color:var(--muted);font-size:13px">No tosses yet…</span>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="card">
+      <div class="card-title">Probability Insight</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.8">
+        Each coin toss is an <strong>independent event</strong> with probability:<br>
+        <span style="font-size:20px;font-weight:900;color:var(--navy)">P(Heads) = P(Tails) = ½</span>
+      </div>
+      <div class="converge" id="convergeMsg" style="margin-top:12px">
+        Toss the coin many times to see the <strong>Law of Large Numbers</strong> in action — the observed frequency will converge toward the theoretical probability of 0.5.
+      </div>
+      <div style="margin-top:16px;font-size:13px;color:var(--muted)">
+        <strong style="color:var(--navy)">Expected value per toss:</strong><br>
+        E[X] = 1 × ½ + 0 × ½ = <strong style="color:var(--gold)">0.5</strong><br><br>
+        <strong style="color:var(--navy)">Variance:</strong> σ² = p(1−p) = <strong style="color:var(--gold)">0.25</strong>
+      </div>
+    </div>
+  </div>
+ 
+</div><!-- /page -->
+ 
+<!-- FOOTER -->
+<footer>
+  <strong>Horus University in Egypt — HUE</strong> &nbsp;|&nbsp; AI &amp; Probability Course &nbsp;|&nbsp; Coin Toss Simulation Project
+</footer>
+ 
+<!-- ══════ JAVASCRIPT ══════ -->
+<script>
+// ── STATE ──
+let heads = 0, tails = 0, total = 0;
+let streak = 0, lastResult = null;
+let convergenceData = [];   // {n, ratio}
+let running = false;
+ 
+// ── CHARTS ──
+const barCtx = document.getElementById('barChart').getContext('2d');
+const lineCtx = document.getElementById('lineChart').getContext('2d');
+ 
+const barChart = new Chart(barCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Heads', 'Tails'],
+    datasets: [{
+      label: 'Count',
+      data: [0, 0],
+      backgroundColor: ['#f0b429cc', '#3b6cb7cc'],
+      borderColor: ['#c8960c', '#1a2f5e'],
+      borderWidth: 2,
+      borderRadius: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { font: { family: 'Cairo' } } },
+      x: { ticks: { font: { family: 'Cairo', weight: '700' } } }
+    }
+  }
+});
+ 
+const lineChart = new Chart(lineCtx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      {
+        label: 'Heads %',
+        data: [],
+        borderColor: '#c8960c',
+        backgroundColor: 'rgba(200,150,12,.08)',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      },
+      {
+        label: 'Expected 50%',
+        data: [],
+        borderColor: '#3b6cb7',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        tension: 0,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { font: { family: 'Cairo' }, boxWidth: 16 } }
+    },
+    scales: {
+      y: {
+        min: 0, max: 100,
+        ticks: { callback: v => v + '%', font: { family: 'Cairo' } }
+      },
+      x: {
+        ticks: { maxTicksLimit: 6, font: { family: 'Cairo' } }
+      }
+    }
+  }
+});
+ 
+// ── TOSS LOGIC ──
+function tossCoin(bias) {
+  return Math.random() < bias ? 'H' : 'T';
+}
+ 
+function updateUI() {
+  const hp = total ? (heads / total * 100) : 50;
+  const tp = total ? (tails / total * 100) : 50;
+ 
+  document.getElementById('statHeads').textContent = heads;
+  document.getElementById('statTails').textContent = tails;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statHeadsPct').textContent = (total ? (heads/total*100).toFixed(2) : '0.00') + '%';
+  document.getElementById('statTailsPct').textContent = (total ? (tails/total*100).toFixed(2) : '0.00') + '%';
+  document.getElementById('statStreak').textContent = 'Streak: ' + streak;
+ 
+  document.getElementById('barHeads').style.width = hp.toFixed(1) + '%';
+  document.getElementById('barTails').style.width = tp.toFixed(1) + '%';
+  document.getElementById('pctHeads').textContent = hp.toFixed(1) + '%';
+  document.getElementById('pctTails').textContent = tp.toFixed(1) + '%';
+ 
+  // convergence message
+  if (total >= 100) {
+    const diff = Math.abs(hp - 50).toFixed(1);
+    document.getElementById('convergeMsg').innerHTML =
+      `After <strong>${total}</strong> tosses, heads frequency is <strong>${hp.toFixed(2)}%</strong> — only <strong>${diff}%</strong> from the theoretical 50%. The Law of Large Numbers is working!`;
+  }
+}
+ 
+function addToLineChart(n, hRatio) {
+  // Sample every 1 toss if small, every 10 if big
+  const step = n <= 200 ? 1 : n <= 1000 ? 5 : 20;
+  if (n % step !== 0 && n !== 1) return;
+  lineChart.data.labels.push(n);
+  lineChart.data.datasets[0].data.push(+(hRatio * 100).toFixed(2));
+  lineChart.data.datasets[1].data.push(50);
+  if (lineChart.data.labels.length > 400) {
+    lineChart.data.labels.shift();
+    lineChart.data.datasets[0].data.shift();
+    lineChart.data.datasets[1].data.shift();
+  }
+  lineChart.update('none');
+}
+ 
+function addChip(result) {
+  const wrap = document.getElementById('historyChips');
+  // Remove placeholder
+  if (wrap.querySelector('span')) wrap.innerHTML = '';
+  if (wrap.children.length >= 200) wrap.removeChild(wrap.firstChild);
+  const chip = document.createElement('div');
+  chip.className = 'chip ' + result;
+  chip.textContent = result;
+  wrap.appendChild(chip);
+  document.getElementById('historyWrap').scrollTop = 99999;
+}
+ 
+async function startToss() {
+  if (running) return;
+  running = true;
+  document.getElementById('btnToss').disabled = true;
+ 
+  const n = Math.min(parseInt(document.getElementById('numTosses').value) || 1, 10000);
+  const bias = parseFloat(document.getElementById('biasSelect').value);
+  const speed = parseInt(document.getElementById('speedSelect').value);
+ 
+  const coin = document.getElementById('coin');
+  const label = document.getElementById('resultLabel');
+ 
+  for (let i = 0; i < n; i++) {
+    const result = tossCoin(bias);
+    if (result === 'H') {
+      heads++;
+      if (lastResult === 'H') streak++; else streak = 1;
+    } else {
+      tails++;
+      if (lastResult === 'T') streak++; else streak = 1;
+    }
+    lastResult = result;
+    total++;
+ 
+    // Update coin visual (only animate if slow enough)
+    if (speed > 0) {
+      coin.classList.remove('spinning');
+      void coin.offsetWidth; // reflow
+      coin.classList.add('spinning');
+      label.textContent = result === 'H' ? '🟡 HEADS!' : '🔵 TAILS!';
+      label.style.color = result === 'H' ? 'var(--gold)' : 'var(--tails)';
+    }
+ 
+    addChip(result);
+    addToLineChart(total, heads / total);
+ 
+    // bar chart
+    barChart.data.datasets[0].data = [heads, tails];
+    barChart.update('none');
+ 
+    updateUI();
+ 
+    if (speed > 0) await sleep(speed);
+    else if (i % 500 === 0) { await sleep(0); } // yield to browser
+  }
+ 
+  // Final animation if instant
+  if (speed === 0) {
+    label.textContent = lastResult === 'H' ? '🟡 HEADS!' : '🔵 TAILS!';
+    label.style.color = lastResult === 'H' ? 'var(--gold)' : 'var(--tails)';
+    coin.classList.remove('spinning');
+    void coin.offsetWidth;
+    coin.classList.add('spinning');
+    barChart.update();
+    lineChart.update();
+  }
+ 
+  running = false;
+  document.getElementById('btnToss').disabled = false;
+}
+ 
+function resetAll() {
+  heads = 0; tails = 0; total = 0; streak = 0; lastResult = null;
+ 
+  document.getElementById('statHeads').textContent = '0';
+  document.getElementById('statTails').textContent = '0';
+  document.getElementById('statTotal').textContent = '0';
+  document.getElementById('statHeadsPct').textContent = '0.00%';
+  document.getElementById('statTailsPct').textContent = '0.00%';
+  document.getElementById('statStreak').textContent = 'Streak: 0';
+  document.getElementById('resultLabel').textContent = '— Press Toss —';
+  document.getElementById('resultLabel').style.color = 'var(--muted)';
+  document.getElementById('barHeads').style.width = '50%';
+  document.getElementById('barTails').style.width = '50%';
+  document.getElementById('pctHeads').textContent = '50%';
+  document.getElementById('pctTails').textContent = '50%';
+  document.getElementById('historyChips').innerHTML = '<span style="color:var(--muted);font-size:13px">No tosses yet…</span>';
+  document.getElementById('convergeMsg').innerHTML = 'Toss the coin many times to see the <strong>Law of Large Numbers</strong> in action — the observed frequency will converge toward the theoretical probability of 0.5.';
+ 
+  barChart.data.datasets[0].data = [0, 0];
+  barChart.update();
+  lineChart.data.labels = [];
+  lineChart.data.datasets[0].data = [];
+  lineChart.data.datasets[1].data = [];
+  lineChart.update();
+}
+ 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
+<!-- ══════ HEADER ══════ -->
+<header>
+  <div class="nav-inner">
+
+    <!-- لوجو الكلية الحقيقي بدل SVG -->
+    <img src="hue_logo.png" class="hue-logo">
+
+    <span class="nav-title">AI &amp; PROBABILITY PROJECT</span>
+
+  </div>
+</header>
