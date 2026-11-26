@@ -27,3 +27,7 @@ An internet connection is needed to load Chart.js and the Cairo and Bebas Neue f
 ## Technology
 
 HTML, CSS, and vanilla JavaScript, with Chart.js for visualizations.
+
+## Related project
+
+- [NEXUS — Number System Converter](https://github.com/hataahmed69-creator/my-website-ahmed1)
